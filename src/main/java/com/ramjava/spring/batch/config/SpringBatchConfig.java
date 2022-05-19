@@ -1,8 +1,11 @@
 package com.ramjava.spring.batch.config;
 
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -54,5 +57,33 @@ public class SpringBatchConfig {
 	@Bean
 	public CustomerProcessor processor() {
 		return new CustomerProcessor();
+	}
+	
+	// ItemWriter
+	@Bean
+	public RepositoryItemWriter<Customer> writer() {
+		RepositoryItemWriter<Customer> writer = new RepositoryItemWriter<>();
+		writer.setRepository(cusRepo);
+		writer.setMethodName("save");
+		return writer;
+		
+	}
+	
+	// Buid the Step
+	@Bean
+	public Step step1() {
+		return sbf.get("csv-step").<Customer, Customer>chunk(10)
+				.reader(reader())
+				.processor(processor())
+				.writer(writer())
+				.build();
+	}
+	
+	// Job
+	public Job runJob() {
+		return jbf.get("importCustomer")
+				.flow(step1())
+				.end()
+				.build()
 	}
 }
